@@ -1,3 +1,14 @@
+Fork of https://github.com/remcohaszing/estree-util-value-to-estree for my usages:
+
+* Configurable support for classes (using customGenerate(), though it's unfinited)
+* Support for well-known symbols
+
+TODO:
+
+* No IIFE when named variable declarations (`export default` instead, should make it configurable)
+* Need to add properties to all objects, including Number, String, etc
+* Configurable depth of serialization
+
 # estree-util-value-to-estree
 
 [![github actions](https://github.com/remcohaszing/estree-util-value-to-estree/actions/workflows/ci.yaml/badge.svg)](https://github.com/remcohaszing/estree-util-value-to-estree/actions/workflows/ci.yaml)

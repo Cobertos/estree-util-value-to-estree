@@ -2,8 +2,8 @@
   "name": "estree-util-value-to-estree",
   "description": "Convert a JavaScript value to an estree expression",
   "version": "3.1.2",
-  "main": "./dist/estree-util-value-to-estree.js",
-  "exports": "./dist/estree-util-value-to-estree.js",
+  "main": "./src/estree-util-value-to-estree.ts",
+  "exports": "./src/estree-util-value-to-estree.ts",
   "type": "module",
   "files": [
     "dist",

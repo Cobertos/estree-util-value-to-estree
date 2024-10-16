@@ -2,6 +2,7 @@ import {
   type ArrayExpression,
   type Expression,
   type Identifier,
+  type MemberExpression,
   type Property,
   type SimpleLiteral,
   type VariableDeclarator
@@ -31,6 +32,16 @@ function literal(value: SimpleLiteral['value']): SimpleLiteral {
   return { type: 'Literal', value }
 }
 
+function memberExpression(object: Expression, property: string): MemberExpression {
+  return {
+    type: 'MemberExpression',
+    computed: false,
+    optional: false,
+    object,
+    property: identifier(property)
+  };
+}
+
 /**
  * Create an ESTree call expression on an object member.
  *
@@ -47,13 +58,7 @@ function methodCall(object: Expression, property: string, args: Expression[]): E
   return {
     type: 'CallExpression',
     optional: false,
-    callee: {
-      type: 'MemberExpression',
-      computed: false,
-      optional: false,
-      object,
-      property: identifier(property)
-    },
+    callee: memberExpression(object, property),
     arguments: args
   }
 }
@@ -248,6 +253,14 @@ export interface Options {
    * @default false
    */
   preserveReferences?: boolean
+
+  /**
+   * Called before all generate() options to provide custom generation for certain
+   * types
+   * 
+   * @default undefined
+   */
+  customGenerate?: (val: unknown, isDeclaration?: boolean) => (Expression | undefined)
 }
 
 /**
@@ -299,7 +312,8 @@ export function valueToEstree(value: unknown, options: Options = {}): Expression
    */
   function analyze(val: unknown): undefined {
     if (typeof val === 'function') {
-      throw new TypeError(`Unsupported value: ${val}`, { cause: val })
+      return
+      //throw new TypeError(`Unsupported value: ${val}`, { cause: val })
     }
 
     if (typeof val !== 'object') {
@@ -366,7 +380,8 @@ export function valueToEstree(value: unknown, options: Options = {}): Expression
     } else {
       const proto = Object.getPrototypeOf(val)
       if (proto != null && proto !== Object.prototype && !options.instanceAsObject) {
-        throw new TypeError(`Unsupported value: ${val}`, { cause: val })
+        return; // dont handle
+        //throw new TypeError(`Unsupported value: ${val}`, { cause: val })
       }
 
       for (const key of Reflect.ownKeys(val)) {
@@ -387,6 +402,13 @@ export function valueToEstree(value: unknown, options: Options = {}): Expression
    *   The ESTree expression to reconstruct the value.
    */
   function generate(val: unknown, isDeclaration?: boolean): Expression {
+    if (options.customGenerate) {
+      const ret = options.customGenerate(val);
+      if (typeof ret === 'object') {
+        return ret;
+      }
+    }
+
     if (val === undefined) {
       return identifier(String(val))
     }
@@ -402,6 +424,26 @@ export function valueToEstree(value: unknown, options: Options = {}): Expression
     if (typeof val === 'symbol') {
       if (val.description && val === Symbol.for(val.description)) {
         return methodCall(identifier('Symbol'), 'for', [literal(val.description)])
+      }
+      const wellKnownSymbols = [
+        Symbol.asyncIterator,
+        Symbol.hasInstance,
+        Symbol.isConcatSpreadable,
+        Symbol.iterator,
+        Symbol.match,
+        Symbol.matchAll,
+        Symbol.replace,
+        Symbol.search,
+        Symbol.species,
+        Symbol.split,
+        Symbol.toPrimitive,
+        Symbol.toStringTag,
+        Symbol.unscopables
+      ]
+      if (val.description && wellKnownSymbols.includes(val)) {
+        // Name is Symbol.xxx
+        const [_,name] = val.description.split('.');
+        return memberExpression(identifier('Symbol'), name);
       }
 
       throw new TypeError(`Only global symbols are supported, got: ${String(val)}`, { cause: val })
